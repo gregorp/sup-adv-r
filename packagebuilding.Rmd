@@ -1,0 +1,449 @@
+---
+title: "Super-Advanced R: Package Building"
+author: "Gregor Passolt"
+date: "Thursday, May 29, 2014"
+output:
+  revealjs_presentation:
+    incremental: true
+    highlight: haddock
+---
+
+## Topics
+
+> - Why Build Packages
+> - Package Basics
+> - Structure of a Package
+> - Documenting Your Code
+> - Building
+> - Checking
+> - When to Build a Package
+
+# Motivation: Why Build a Package?
+
+## Why make packages? {.build}
+
+> - Altruism
+> - Portability
+> - Pride
+> - Documentation
+> - Doing a favor for your future self
+> - Laziness in all of the above
+
+## Why not make a package? {.build}
+
+> - Your project isn't suited for a package.
+> - Laziness.
+
+Though the newest tools make it pretty darn easy.
+
+## Keeping yourself straight with the snarks {.build}
+
+The R-Help mailing list is notorious for being somewhat
+unfriendly, and being nitpicky when anyone calls a *package*
+a *library*.
+
+A *library* is a directory where you keep your packages. See `.libPaths()`
+
+A *package* is a collection of files in a particular structure:
+R files, documentation files, and system files.
+
+## Structure of a package
+
+Open up the folder (or one of the folders) you see in `.libPaths()` and open a package.
+
+```{r}
+.libPaths()
+```
+
+Every package is named by its directory. You can also look at packages on the unofficial [CRAN mirror on Github](github.com/cran).
+
+## Resources for Package Building
+
+> - Hadley's Advanced R Book has a very nice introduction to building packages. This is also the best source I know for `roxygen2` documentation.
+> - The [Writing R Extensions](http://cran.r-project.org/doc/manuals/R-exts.html) webpage is the definitive source. I wouldn't advise looking at it except to answer precise, scoped questions.
+> - RStudio also has a [package basics](http://www.rstudio.com/ide/docs/packages/overview) page, it's lightweight and focused on the GUI options in RStudio, but has links to more sources as well.
+
+## Contents of a package
+
+At a minimum, the package folder must contain files called `DESCRIPTION` and `NAMESPACE`. These are text files with *no file extension*. They have strict formatting guidelines. `devtools`/`roxygen2` will take care of `NAMESPACE` entirely and give us a pretty good start on `DESCRIPTION`.
+
+Then there are folders, at a minimum one called `R`---where you put your R code, and one called `man` for documentation.
+
+Certain other files and folders are optional, but can be helpful. Common examples are a `NEWS` file to record changes, or a `LICENSE` file if you need to include a copy of your license, or a `src` directory containing code that needs to be compiled (e.g., C++ or FORTRAN).
+
+## Creating a package
+
+The basic steps for making a packge from scratch are:
+
+> - Create the file structure (use `devtools::create` or `File/New Project/Package` in a newer version of RStudio; `utils::package.skeleton()` seems dated)
+
+> - Put your R code in the R directory
+
+> - Create documentation (use `roxygen2::roxygenize` or `devtools::document`)
+
+> - Update DESCRIPTION as necessary
+
+> - Load and debug (`devtools::load_all` or RStudio button)
+
+> - Build the package (`R CMD BUILD` or `devtools::build` or the Build tab in RStudio) (when ready for distribution)
+
+> - Check---must pass check to go on CRAN (`R CMD CHECK` or `devtools::check`)
+
+# Packaging
+
+## Truly Minimal Package
+
+Set your working directory as you like and run the following code (let's go one line at time, together)
+
+- `devtools::create("demo1")`
+- `roxygen2::roxygenize("demo1")`
+- `devtools::build("demo1")`
+
+This package doesn't even have any functions! Run `devtools::check("demo1")` and we get one warning, about the non-standard format of the license in the description file.
+
+Change that line in the description file to
+
+```
+License: GPL-2
+```
+then you can build and check again, and it should pass with flying colors!
+
+# Roxygen2 Rocks
+
+## Inside `man`
+
+The `man` folder contains `.Rd` files, for "R documentation". They're written in a weird markup language that's like LaTeX-lite, and then compiled to HTML.
+
+Back in the old days, you had to write these by hand, but now `roxygen2` does most all the work of creating the `.Rd` files, providing you **document your functions correctly.**
+
+## `roxygen` documentation
+
+Roxygen is based on a system for **doc**ument **gen**eration for C functions called Doxygen. There's a special roxygen comment string `#'`, which you put before a function. Inside roxygen comments, `@` denotes control strings for headings.
+
+## roxygen example 1:
+
+```{r, echo = T, eval=FALSE}
+#' Show colours.
+#' 
+#' A quick and dirty way to show colours in a plot.
+#'
+#' @param colours a character vector of colours
+#' @export
+show_col <- function(colours) {
+    print(colours) # the real version does more
+}
+```
+
+Compare to `?scales::show_col`. Save this in `demo1/R/show_col.R`, re-roxygenize, and then run `load_all("demo1")`. Enter `?show_col` at the console, and see your help file!
+
+## roxygen example 2:
+
+Compare code and help text for `?ggplot2::scale_x_continuous`, 
+[https://github.com/cran/ggplot2/blob/master/R/scale-continuous.r](online code link).
+
+Notice the $\LaTeX$-like features, `\code{}`, `\link{}` (for links to other help pages)...
+
+
+## Using `roxygen2`
+
+RStudio has a bit of information on this [posted here](http://www.rstudio.com/ide/docs/packages/documentation).
+
+Every function should have:
+
+- title (required), first "paragraph", followed by blank line (only `#'`).
+- description (required), second "paragraph"
+- details (optional), third "paragraph""
+- `@param` lines for every parameter (required for `CHECK`)
+- `@return` what is returned by the function. Optional, but strongly recommended when applicable. (Labeled **Value** in the .Rd file.)
+
+----
+
+There are lots of optional extras, `@export` if it's to be exported, `@seealso` for related documentation, `@alias` for other search strings that go here, `@examples` for usage examples, `@author` if the function author is different from the package author, `@doctype` if it's package or data (rather than function) documentation...
+
+See the brand new vignettes for the `roxygen2` package for lots more detail.
+
+## Exercise 1
+
+Look at the help for `sum`. How would it be written as a `roxygen` comment?
+
+Create a new R file for your package called `mysum.R`. Write Roxygen-style documentation for `mysum <- function(...) sum(...)`, and then re-roxygenize and load_all to see what you've got!
+
+----
+
+```{r, eval=FALSE}
+#' Sum of Vector Elements
+#'
+#' \code{sum} returns the sum of all the values present in its arguments.
+#'
+#' This is a generic function: methods can be defined for it directly
+#' or via the \code{Summary} group generic.  For this to work properly,
+#' the arguments \code{...} should be unnamed, and dispatch is on the
+#' first argument.'
+#'
+#' @param ... objects to sum
+#' @param na.rm boolean, if \code{TRUE}, \code{NA}'s will be removed
+#' @return an object of the same class as the input type
+#' @seealso \link{colSums} for row and column sums
+mysum <- function(...) sum(...)
+```
+
+----
+
+You can also to package-level documentation or dataset documentation with
+Roxygen. Until the newest version (4.0, release May 19), you *needed* an R code line following a documentation block, and `NULL` was advised  for data and package-level documentation. In the new version, you can just use a string naming the dataset, e.g., "diamonds".
+
+This is the actual `roxygen2` documentation for the `diamonds` data set.
+
+```{r, eval=FALSE}
+#' Prices of 50,000 round cut diamonds.
+#' 
+#' A dataset containing the prices and other attributes of almost 54,000
+#'  diamonds. The variables are as follows:
+#' 
+#' \itemize{
+#'   \item price. price in US dollars (\$326--\$18,823)  
+#'   \item carat. weight of the diamond (0.2--5.01) 
+#'   ...
+#' }
+#' 
+#' @docType data
+#' @keywords datasets
+#' @format A data frame with 53940 rows and 10 variables
+#' @name diamonds
+NULL
+```
+
+## Imports and Depends {.smaller}
+
+Imports and Depends are two lines in the description file.
+
+These are where you list packages that your package relies on.
+If you made a function that uses `ggplot`, you'd need to list `ggplot2` in one of these two places. **You do not need to load `ggplot2` with `library()` or `require()`.** These fields take care of that for you.
+
+Imports is *relatively* new, and generally preferred. It lets your package use functions in the imported package without loading the whole package for the user.
+
+Depends completely loads the depending package for the user. This can be annoying if, for example, I like using `dplyr`, and I load a package that depends on `MASS`. Because it used "depends" instead of "imports", `MASS` will be loaded, and my `dplyr::select` function will be masked.
+
+The nicest write-up I've seen about this is on [Stack Overflow](http://stackoverflow.com/a/8638902/903061)
+
+That said, I have a package for general use at work, and it has lots of dependencies listed purely for the loading effect. Only 2 or 3 people use the package, but it means I don't have to load `dplyr` and `ggplot2` and `knitr` and `Survival` and `stringr` and etc. every time I start R. (Though one could argue that I should put those package loadings in my `Rprofile.site` file...)
+
+# BYOP!
+
+## Exercise: BYOP
+
+Build your own Package!
+
+Now it's time to create your own package. Use `create` to get the framework, add a function or two to the `R` file (with documentation!), fill out the `DESCRIPTION`, `roxygenize` and `load_all` until things look good, then `build`!
+
+Once you've built, go ahead and `check`, and see if your functions meet the minimum CRAN requirements. We'll discuss the errors and warnings that come up.
+
+## Submitting to CRAN
+
+If you can pass the `check`, you're about ready to send it on to CRAN! (Technnically, you should test on various operating systems first).
+
+`devtools::release` will ask you some confirmation questions, then upload your package to the CRAN FTP server, and even draft an email to the CRAN maintainers for you.
+
+# Other Info / Best Practices / Gregor's Pulpit
+
+## Package operators `::` and `:::` {.smaller}
+
+First of all, there is help on these
+```{r, eval=FALSE}
+?"::"
+```
+And it is pretty easy. The double colon `::` works for packages and functions
+as `$` works for data.frames and columns.
+
+```
+pkg::func
+```
+
+says "go find the function `func` (or packaged dataset) from the package `pkg`."
+
+## Usefulness 
+
+`::` is really useful in two cases:
+
+- Communication. It's a lot more concise to say "`devtools::build`" than
+    "the build function in the devtools package".
+    
+- If you have loaded two or more packages that have functions of the same name,
+   you need to specify which one to use.
+
+And marginally useful in a third:
+
+- Bringing in functions or data from a package without loading the whole package.
+
+----
+
+## Triple colon `:::` {.smaller}
+
+Sometimes packages don't "export" all of their functions.
+(This is quite common in big packages.) In fact, the default is to *not* export, and you have to mark things in roxygen with `@export` for them to be exported.
+
+In general, you should try to write short, modular functions
+that do things in small pieces, rather than one giant function
+that does a whole lot.
+
+If a function just helps with an intermediate step,
+there's no reason to make it available to the end user. Only
+functions specifically marked for export (`@export` in roxygen2)
+will be visible to people who install the package.
+Power users can get at unexported functions with `:::`
+
+## When to export
+
+`:::` is only **rarely useful**. Most package creators will export
+all the functions you should need. You may end up using this
+if you're hacking something together.
+
+Some would advocate always exporting everything. I feel better only
+exporting things I expect the user to use, and assume that power users
+can find what they need.
+
+In a "nice" package, this is related to versioning. If people are relying on your code, you shouldn't make changes that alter the required syntax very often. 
+
+Check out Yihui Xie's ["rules" (recommendations)](http://yihui.name/en/2013/06/r-package-versioning/) for versioning. Summary: don't break syntax except for good reasons and in a major update.
+
+## `:::` example
+
+```{r, eval = FALSE}
+require(ggplot2)
+add_group(mtcars)  # does not work
+ggplot2::add_group(mtcars) # does not work
+ggplot2:::add_group(mtcars) # works!
+```
+
+Also note that this is a function that you would probably never need to use yourself.
+
+## Code organization
+
+There's an old guideline that, in a package, each function should get it's own `.R` file. For bigger functions, this is a good idea and makes your package code much easier to navigate, however I think it's silly if you have a lot of small utility functions. I try to group like-functions together. However, if I *ever* can't remember instantly which file a function is in, I'll strongly consider breaking it out into it's own file.
+
+If you look on CRAN, you'll see that most packages use the guideline to some extent, but bend it a fair amount. You'll also see, if you're looking for one particular function, that it's nice and friendly when they do follow it pretty closely.
+
+# Interactive vs. Programmatic Functions
+
+## Unquoted column names in arguments
+
+The emphasis in R is *scripting*. Most things are just about the
+same typing into your console and putting in a package, but the main
+exception is convenient functions where you can reference column names.
+
+Functions like `with`, `within`, `subset`, can be risky to use in functions,
+because they assume column names are consistent. In a package, `R CMD CHECK`
+will throw warnings if you refer to column names as objects. 
+
+## Work-arounds {.smaller}
+
+Most of these functions are easy to avoid, they just save a little typing.
+Don't use `with`; use `[` instead of `subset`...
+
+Defining aesthetics in `ggplot` is similar. This is the main purpse of `aes_string`, which does the same thing as `aes()` but takes string column names.
+takes quoted column names.
+
+```{r, fig.height= 3, fig.width= 3.5}
+require(ggplot2, quietly = T)
+ggplot(mtcars, aes_string(x = "disp", y = "mpg")) +
+    geom_point()
+```
+
+----
+
+This way, we can make a function for scatterplots
+where we pass an arbitrary data.frame and the `x` and `y`
+arguments are whatever column names we want.
+
+```{r}
+make_gg_scatter <- function(data, x, y, print = T) {
+    gg <- ggplot(data, aes_string(x = x, y = y)) +
+        geom_point()
+    if (print) print(gg)
+    return(gg)
+}
+```
+
+# User-Friendly Functions
+
+## Package-Level documentation
+
+> - When someone type `?yourpackage`, show them something useful.
+
+> - Write examples in your function documentation.
+
+> - Write a vignette showing how your functions work together.
+
+## Warnings, errors and messages
+
+Errors stop code. With warnings, code still executes, but a
+special type of message is printed.
+
+Good warnings and errors makes code much more user-friendly.
+
+The standard commands are `stop` for an error, and `warning` for a warning.
+`stopifnot` is nice for code readability, and it automatically generates
+an error message based on the condition, which means you don't have to write an error message by hand, but it might be more confusing to the user.
+
+----
+
+Messages (`message`) are for other types of messages, like what you see when
+some packages start, an optimization routine that updates you as you go along, etc. 
+
+Displaying data or results to the console should use `print` or `cat`.
+
+----
+
+```{r}
+make_gg_scatter <- function(data, x, y, print = T) {
+    if (!is.data.frame(data)) stop("data must be a data.frame")
+    gg <- ggplot(data, aes_string(x = x, y = y)) +
+        geom_point()
+    if (print) print(gg)
+    return(gg)
+}
+```
+
+----
+
+```{r}
+make_gg_scatter <- function(data, x, y, print = T) {
+    if (!is.data.frame(data)) stop("data must be a data.frame")
+    stopifnot(x %in% names(data), y %in% names(data))
+    gg <- ggplot(data, aes_string(x = x, y = y)) +
+        geom_point()
+    if (print) print(gg)
+    return(gg)
+}
+```
+
+----
+
+```{r}
+make_gg_scatter <- function(data, x, y, print = T) {
+    if (!is.data.frame(data)) stop("data must be a data.frame")
+    stopifnot(x %in% names(data), y %in% names(data))
+    gg <- ggplot(data, aes_string(x = x, y = y)) +
+        geom_point()
+    if (print) {
+        print(gg) 
+        message("Plot printed.")
+    } else warning("Plot not printed.")
+    return(gg)
+}
+```
+
+## Working around errors
+
+Sometimes you want to try something in a script, but
+if it does not work you don't want your whole script to
+stop. You can wrap expressions in `try` or `tryCatch`
+to do this.
+
+There's a beautiful example of this written up on
+[Stack Overflow](http://stackoverflow.com/a/12195574/903061).
+It's better than any documentation I've seen.
+
+## Argument Matching
+
+Sometimes one argument several possibilities that could be specified by the user. (Like `method` in `optim()`, or `breaks` in `hist()`.) You can use `match.arg()` inside your function so users can partially fill out the choice, rather than needing to type out `hist(rnorm(100), breaks = "freedman-diaconis")`.
